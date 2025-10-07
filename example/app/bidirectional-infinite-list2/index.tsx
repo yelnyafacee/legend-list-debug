@@ -6,6 +6,10 @@ import { LegendList, type LegendListRef } from "@legendapp/list";
 import { type Item, renderItem } from "~/app/cards-renderItem";
 import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
 
+import authFetch from "./files/auth-fetch";
+
+
+
 let last = performance.now();
 
 export default function BidirectionalInfiniteList() {
@@ -71,6 +75,161 @@ export default function BidirectionalInfiniteList() {
     // }, []);
 
     const { bottom } = useSafeAreaInsets();
+
+
+
+
+
+    const firstMessageRef = useRef(null);
+    const lastMessageRef = useRef(null);
+    const pageRef = useRef(1);
+    const getChatMessagesAbortControllerRef = useRef(new AbortController());
+
+    const [loadMoreCompleted, setLoadMoreCompleted] = useState(false)
+
+    // Page Size
+    let pageSize = 10;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Async : Fetch Initial Message(s)
+    |--------------------------------------------------------------------------
+    */
+    const fetchInitialMessages = async () => {
+
+        // Abort > Request [ GetChatMessages ]
+        getChatMessagesAbortControllerRef.current.abort();
+        getChatMessagesAbortControllerRef.current = new AbortController();
+
+        // Setup > Result Var
+        let result = null
+
+        // Load > Chat > Message(s) [ First Load ]
+        result = await getInitialChatMessages(1, pageSize)
+
+        // Result > Exist
+        if(result && (result.messages.length > 0)) {
+
+            // Set > firstMessageRef
+            firstMessageRef.current = result.messages[0]
+
+            // Set > lastMessageRef
+            lastMessageRef.current = result.messages[result.messages.length - 1]
+
+            // result.page > EXIST
+            if(result?.page) {
+                pageRef.current = result.page
+            }
+
+            // Set > Initial Messages
+            setData(result.messages)
+
+            // Messages > All Loaded
+            if ((pageRef.current * pageSize) >= result.total_count) {
+
+                // Loadmore Complete === TRUE
+                setLoadMoreCompleted(true)
+
+            } // Messages > NOT All Loaded
+            else
+            {
+                // Loadmore Complete === FALSE
+                setLoadMoreCompleted(false)
+
+            }
+
+        }
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Get > Initial > Chat Messages
+    |--------------------------------------------------------------------------
+    */
+    const getInitialChatMessages = async (routerParams, page = 1, pageSize = 40) => {
+
+        // let results = {
+        //     total_count: 0,
+        //     messages: [],
+        //     cancelled: false
+        // }
+
+        console.log("2rrrrrrrrrrrrrrrrrrr" + JSON.stringify(routerParams, null, 2))
+
+        // Query Parameters
+        const queryParams = new URLSearchParams({
+            size: 0, toString(): string {
+                return "";
+            }, [Symbol.iterator](): any {
+            }, append(name: string, value: string): void {
+            }, delete(name: string, value?: string): void {
+            }, entries(): any {
+            }, forEach(callbackfn, thisArg?): void {
+            }, get(name: string): string | null {
+                return undefined;
+            }, getAll(name: string): string[] {
+                return [];
+            }, has(name: string, value?: string): boolean {
+                return false;
+            }, keys(): any {
+            }, set(name: string, value: string): void {
+            }, sort(): void {
+            }, values(): any {
+            },
+            message_id:                 30,
+            conversation_id:            3019,
+            page:                       page,
+            pageSize:                   pageSize
+        }).toString();
+
+        // Create AJAX URL
+        const ajax_url = "/api/whatsapp/chat/initialchatmessages" + ((queryParams.length > 0)? "?" + queryParams : "")
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | AJAX > Request
+        |--------------------------------------------------------------------------
+        */
+
+        return await authFetch(ajax_url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            signal: getChatMessagesAbortControllerRef.current.signal,
+            // body: JSON.stringify({
+            //     ...data,
+            //     message_id: lastMessage_id,
+            // }),
+        })
+            .then(data => {
+
+                return data
+
+            })
+            .catch(async (error) => {
+
+                console.error("fetch failed: " + error)
+
+                // Request > Canceled
+                if (error.name === 'AbortError') {
+
+                    return {
+                        conversations: []
+                    }
+
+                }
+
+            });
+
+    }
+
+
+
 
 
     /*

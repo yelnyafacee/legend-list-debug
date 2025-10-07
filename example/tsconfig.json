@@ -42,6 +42,7 @@
         "**/*.ts",
         "**/*.tsx",
         ".expo/types/**/*.ts",
-        "expo-env.d.ts"
+        "expo-env.d.ts",
+        "../node_modules/react-native/types/modules/globals.d.ts"
     ]
 }
